@@ -67,19 +67,18 @@ R=22
 tf.random.set_seed(R)
 np.random.seed(R)
 assert tf.__version__.startswith('2.')
-h_dim = 44
+h_dim = 30
 batchsz = 128
 lr = 1e-3
 
 #prepare datasets
 data=pkl2numpy("2016.04C.multisnr.pkl")
-y_train=data["QPSK",2][:,:,12:100]
+y_train=data["QPSK",8][:,:,12:100]
 for i in range(y_train.shape[0]):
     for j in range(88):
         y_train[i,0,j]=(y_train[i,0,j]+2.)/4.
         y_train[i,1,j]=(y_train[i,1,j]+2.)/4.
 y_train=tf.reshape(y_train,[y_train.shape[0],2,88,1])
-savepic(tf.reshape(y_train[200,:,:,:],[1,2,88,1]),"000")
 train_db=tf.data.Dataset.from_tensor_slices(y_train)
 train_db = train_db.shuffle(batchsz * 5).batch(batchsz)
 
@@ -92,11 +91,11 @@ class AE(keras.Model):
 
         #2*88->conv2D(1,2,40)->Dense(44)
         self.encoder1 = layers.Conv2D(filters=40, kernel_size=(1, 2), input_shape=(None,2, 88, 1), padding="valid")
-        self.encoder2 = layers.Dense(44, activation=tf.nn.sigmoid)
+        self.encoder2 = layers.Dense(h_dim, kernel_regularizer=keras.regularizers.l1(0.001), activation=tf.nn.sigmoid)
 
 
         #Dense(44)->Dense(2*88)->Conv2D(1,1,81)->2*88
-        self.decoder1 = layers.Dense(176, activation=tf.nn.sigmoid)
+        self.decoder1 = layers.Dense(176,kernel_regularizer=keras.regularizers.l1(0.001), activation=tf.nn.sigmoid)
         #self.decoder2 = layers.Conv2D(filters=81, kernel_size=(1, 1), input_shape=(176,1), padding="valid")
         #self.pool1 = layers.MaxPool2D(pool_size=[1, 1], strides=1, padding='valid')
 
@@ -120,6 +119,11 @@ model.summary()
 
 optimizer = tf.optimizers.Adam(lr=lr)
 
+
+y1_test=data[('QPSK',-10)][200,:,12:100]
+y1_test=tf.reshape(y1_test,[1,2,88,1])
+savepic(y1_test,"000")
+
 for epoch in range(2000):
 
     for step, x in enumerate(train_db):
@@ -137,14 +141,15 @@ for epoch in range(2000):
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         if step % 100 ==0:
+            print(h_rec[0,:])
             print(epoch, step, float(rec_loss))
 
-    y1_test=data[('QPSK',2)][200,:,12:100]
-    y1_test=tf.reshape(y1_test,[1,2,88,1])
+
     logits,h=model(y1_test)
     y_hat=logits
     #print(h)
     #savepic(y1_test,'epoch'+str(epoch))
     savepic(y_hat,"epoch"+str(epoch))
-    savetog(y_hat,y1_test,"epoch"+str(epoch))
+    #savetog(y_hat,y1_test,"epoch"+str(epoch))
+
 
