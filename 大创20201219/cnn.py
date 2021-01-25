@@ -45,6 +45,17 @@ def savepic(y,name):
     ax.set_ylabel('y')
     fig.savefig('cdata/'+name+'.png')
 
+def savestem(h,name):
+    fig = plt.figure(figsize=(8, 2.5))
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    ax = fig.add_axes((left, bottom, width, height))
+    x = range(44)
+    h1 = tf.reshape(h, [44])
+    ax.stem(x, h1)
+    ax.set_xlabel('n')
+    ax.set_ylabel('h')
+    fig.savefig('h_stem/' + name + '.png')
+
 def savetog(ya,yb,name):
     fig = plt.figure(figsize=(8, 2.5))
     left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
@@ -62,22 +73,28 @@ def savetog(ya,yb,name):
     ax.set_ylabel('y')
     fig.savefig('tdata/' + name + '.png')
 
+#assert dir
+assets_dir = './cdata'
+if not os.path.isdir(assets_dir):
+    os.makedirs(assets_dir)
 #set random seeds
 R=22
 tf.random.set_seed(R)
 np.random.seed(R)
 assert tf.__version__.startswith('2.')
-h_dim = 30
+h_dim = 44
 batchsz = 128
-lr = 1e-3
+lr = 0.0001
+l1r=0.0001
+l2r=0.001
 
 #prepare datasets
 data=pkl2numpy("2016.04C.multisnr.pkl")
-y_train=data["QPSK",8][:,:,12:100]
+y_train=data["QPSK",18][:,:,12:100]
 for i in range(y_train.shape[0]):
     for j in range(88):
-        y_train[i,0,j]=(y_train[i,0,j]+2.)/4.
-        y_train[i,1,j]=(y_train[i,1,j]+2.)/4.
+        y_train[i,0,j]=(y_train[i,0,j]+2.5)/5.
+        y_train[i,1,j]=(y_train[i,1,j]+2.5)/5.
 y_train=tf.reshape(y_train,[y_train.shape[0],2,88,1])
 train_db=tf.data.Dataset.from_tensor_slices(y_train)
 train_db = train_db.shuffle(batchsz * 5).batch(batchsz)
@@ -90,27 +107,29 @@ class AE(keras.Model):
         super(AE, self).__init__()
 
         #2*88->conv2D(1,2,40)->Dense(44)
-        self.encoder1 = layers.Conv2D(filters=40, kernel_size=(1, 2), input_shape=(None,2, 88, 1), padding="valid")
-        self.encoder2 = layers.Dense(h_dim, kernel_regularizer=keras.regularizers.l1(0.001), activation=tf.nn.sigmoid)
+        self.encoder1 = layers.Conv2D(filters=1, kernel_size=(2, 40), input_shape=(None,2, 88, 1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
+        self.encoder2 = layers.Dense(h_dim, activation=tf.nn.sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
 
 
         #Dense(44)->Dense(2*88)->Conv2D(1,1,81)->2*88
-        self.decoder1 = layers.Dense(176,kernel_regularizer=keras.regularizers.l1(0.001), activation=tf.nn.sigmoid)
-        #self.decoder2 = layers.Conv2D(filters=81, kernel_size=(1, 1), input_shape=(176,1), padding="valid")
+        self.decoder1 = layers.Dense(2*88, activation=tf.nn.sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
+        self.decoder2 = layers.Conv2D(filters=1, kernel_size=(1, 81), input_shape=(176,1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
         #self.pool1 = layers.MaxPool2D(pool_size=[1, 1], strides=1, padding='valid')
 
 
     def call(self, inputs, training=None):
         # [b, 2, 88] => [b, 44]
-        h1 = self.encoder1(inputs)
-        h2 = tf.reshape(h1,[-1,2*87*40])
-        h3 = self.encoder2(h2)
+
+        h1 = tf.nn.relu(self.encoder1(inputs))
+        h2 = tf.reshape(h1,[-1,2*88])
+        h = self.encoder2(h2)
         # [b, 44] => [b, 2, 88]
-        x_hat1 = self.decoder1(h3)
-        #x_hat2 = self.decoder2(x_hat1)
+        x_hat1 = self.decoder1(h)
+        x_hat1 = tf.reshape(x_hat1,[-1,1,176,1])
+        x_hat2 = tf.nn.relu(self.decoder2(x_hat1))
         #x_hat = self.pool1(x_hat2)
-        x_hat=tf.reshape(x_hat1,[-1,2,88,1])
-        return x_hat,h3
+        x_hat=tf.reshape(x_hat2,[-1,2,88,1])
+        return x_hat,h
 
 model = AE()
 model.build(input_shape=(None,2,88,1))
@@ -120,11 +139,14 @@ model.summary()
 optimizer = tf.optimizers.Adam(lr=lr)
 
 
-y1_test=data[('QPSK',-10)][200,:,12:100]
+y1_test=data[('QPSK',8)][200,:,12:100]
+for j in range(88):
+    y1_test[0,j]=(y1_test[0,j]+2.5)/5.
+    y1_test[1,j]=(y1_test[1,j]+2.5)/5.
 y1_test=tf.reshape(y1_test,[1,2,88,1])
 savepic(y1_test,"000")
 
-for epoch in range(2000):
+for epoch in range(20000):
 
     for step, x in enumerate(train_db):
 
@@ -133,23 +155,22 @@ for epoch in range(2000):
             x_rec_logits ,h_rec= model(x)
 
             rec_loss=tf.losses.mean_squared_error(x,x_rec_logits)
-            #rec_loss = tf.losses.binary_crossentropy(x, x_rec_logits, from_logits=True)
-            rec_loss = tf.reduce_mean(rec_loss)
-            #rec_loss = abs(rec_loss)
-
+            rec_loss=tf.reduce_mean(rec_loss)
+            l1_loss=tf.losses.mean_absolute_error(h_rec,np.zeros(h_rec.shape))
+            l1_loss=tf.cast(tf.reduce_mean(l1_loss),tf.float32)
+            rec_loss+=l1r*l1_loss
         grads = tape.gradient(rec_loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-        if step % 100 ==0:
-            print(h_rec[0,:])
-            print(epoch, step, float(rec_loss))
+    if epoch % 100 ==0:
 
-
-    logits,h=model(y1_test)
-    y_hat=logits
-    #print(h)
-    #savepic(y1_test,'epoch'+str(epoch))
-    savepic(y_hat,"epoch"+str(epoch))
-    #savetog(y_hat,y1_test,"epoch"+str(epoch))
+        print(epoch, step, float(rec_loss))
+        logits,h=model(y1_test)
+        y_hat=logits
+        #print(h)
+        #savepic(y1_test,'epoch'+str(epoch))
+        savepic(y_hat,"epoch"+str(epoch))
+        savestem(h,"epoch"+str(epoch))
+        #savetog(y_hat,y1_test,"epoch"+str(epoch))
 
 
