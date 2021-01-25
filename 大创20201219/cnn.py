@@ -85,7 +85,7 @@ assert tf.__version__.startswith('2.')
 h_dim = 44
 batchsz = 128
 lr = 0.0001
-l1r=0.0001
+l1r=0.0002
 l2r=0.001
 
 #prepare datasets
@@ -146,7 +146,7 @@ for j in range(88):
 y1_test=tf.reshape(y1_test,[1,2,88,1])
 savepic(y1_test,"000")
 
-for epoch in range(20000):
+for epoch in range(200000):
 
     for step, x in enumerate(train_db):
 
@@ -162,7 +162,7 @@ for epoch in range(20000):
         grads = tape.gradient(rec_loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    if epoch % 100 ==0:
+    if epoch % 500 ==0:
 
         print(epoch, step, float(rec_loss))
         logits,h=model(y1_test)
