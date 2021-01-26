@@ -45,6 +45,17 @@ def savepic(y,name):
     ax.set_ylabel('y')
     fig.savefig('cdata/'+name+'.png')
 
+def saveweight(w,name):
+    fig = plt.figure(figsize=(8, 2.5))
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    ax = fig.add_axes((left, bottom, width, height))
+    x = range(w.shape[0])
+    y = tf.reshape(w, [w.shape[0]])
+    ax.plot(x, y)
+    ax.set_xlabel('n')
+    ax.set_ylabel('w')
+    fig.savefig('weight/' + name + '.png')
+
 def savestem(h,name):
     fig = plt.figure(figsize=(8, 2.5))
     left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
@@ -84,8 +95,8 @@ np.random.seed(R)
 assert tf.__version__.startswith('2.')
 h_dim = 44
 batchsz = 128
-lr = 0.001
-l1r=0.001
+lr = 0.0005
+l1r=0.0001
 l2r=0.001
 
 #prepare datasets
@@ -107,7 +118,7 @@ class AE(keras.Model):
         super(AE, self).__init__()
 
         #2*88->conv2D(1,2,40)->Dense(44)
-        self.encoder1 = layers.Conv2D(filters=1, kernel_size=(2, 40), input_shape=(None,2, 88, 1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
+        self.encoder1 = layers.Conv2D(filters=2, kernel_size=(1, 40), input_shape=(None,2, 88, 1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
         self.encoder2 = layers.Dense(h_dim, activation=tf.keras.activations.hard_sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
 
 
@@ -121,7 +132,7 @@ class AE(keras.Model):
         # [b, 2, 88] => [b, 44]
 
         h1 = tf.nn.relu(self.encoder1(inputs))
-        h2 = tf.reshape(h1,[-1,2*88])
+        h2 = tf.reshape(h1,[-1,2*2*88])
         h = self.encoder2(h2)
         # [b, 44] => [b, 2, 88]
         x_hat1 = self.decoder1(h)
@@ -139,14 +150,14 @@ model.summary()
 optimizer = tf.optimizers.Adam(lr=lr)
 
 
-y1_test=data[('QPSK',8)][200,:,12:100]
+y1_test=data[('QPSK',8)][198,:,12:100]
 for j in range(88):
     y1_test[0,j]=(y1_test[0,j]+2.5)/5.
     y1_test[1,j]=(y1_test[1,j]+2.5)/5.
 y1_test=tf.reshape(y1_test,[1,2,88,1])
 savepic(y1_test,"000")
 
-for epoch in range(500000):
+for epoch in range(20000):
 
     for step, x in enumerate(train_db):
 
@@ -172,7 +183,11 @@ for epoch in range(500000):
         savepic(y_hat,"epoch"+str(epoch))
         savestem(h,"epoch"+str(epoch))
         #savetog(y_hat,y1_test,"epoch"+str(epoch))
-weights=model.get_weights()
-print(weights)
-tf.saved_model.save(model, "saved/1")
+        weight_Conv2d_0= model.get_layer('conv2d').get_weights()
+        weight_Conv2d_1= model.get_layer('conv2d_1').get_weights()
+        print(weight_Conv2d_0[0].shape)
+        saveweight(weight_Conv2d_0[0][0][:,:,0],"0_epoch"+str(epoch))
+        saveweight(weight_Conv2d_0[0][0][:,:,1],"1_epoch"+str(epoch))
+        saveweight(weight_Conv2d_1[0][0],"2_epoch"+str(epoch))
+#tf.saved_model.save(model, "saved/1")
 
