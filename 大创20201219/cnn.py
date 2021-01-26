@@ -84,8 +84,8 @@ np.random.seed(R)
 assert tf.__version__.startswith('2.')
 h_dim = 44
 batchsz = 128
-lr = 0.0001
-l1r=0.0002
+lr = 0.001
+l1r=0.001
 l2r=0.001
 
 #prepare datasets
@@ -108,7 +108,7 @@ class AE(keras.Model):
 
         #2*88->conv2D(1,2,40)->Dense(44)
         self.encoder1 = layers.Conv2D(filters=1, kernel_size=(2, 40), input_shape=(None,2, 88, 1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
-        self.encoder2 = layers.Dense(h_dim, activation=tf.nn.sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
+        self.encoder2 = layers.Dense(h_dim, activation=tf.keras.activations.hard_sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
 
 
         #Dense(44)->Dense(2*88)->Conv2D(1,1,81)->2*88
@@ -116,7 +116,7 @@ class AE(keras.Model):
         self.decoder2 = layers.Conv2D(filters=1, kernel_size=(1, 81), input_shape=(176,1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
         #self.pool1 = layers.MaxPool2D(pool_size=[1, 1], strides=1, padding='valid')
 
-
+    @tf.function
     def call(self, inputs, training=None):
         # [b, 2, 88] => [b, 44]
 
@@ -146,7 +146,7 @@ for j in range(88):
 y1_test=tf.reshape(y1_test,[1,2,88,1])
 savepic(y1_test,"000")
 
-for epoch in range(200000):
+for epoch in range(500000):
 
     for step, x in enumerate(train_db):
 
@@ -172,5 +172,7 @@ for epoch in range(200000):
         savepic(y_hat,"epoch"+str(epoch))
         savestem(h,"epoch"+str(epoch))
         #savetog(y_hat,y1_test,"epoch"+str(epoch))
-
+weights=model.get_weights()
+print(weights)
+tf.saved_model.save(model, "saved/1")
 
