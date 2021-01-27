@@ -120,7 +120,7 @@ class AE(keras.Model):
         #2*88->conv2D(1,2,40)->Dense(44)
         self.encoder1 = layers.Conv2D(filters=2, kernel_size=(1, 40), input_shape=(None,2, 88, 1), padding="same",kernel_regularizer=keras.regularizers.l2(l2r))
         self.encoder2 = layers.Dense(h_dim, activation=tf.keras.activations.hard_sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
-
+        self.dropout1 = layers.Dropout(0.4)
 
         #Dense(44)->Dense(2*88)->Conv2D(1,1,81)->2*88
         self.decoder1 = layers.Dense(2*88, activation=tf.nn.sigmoid,kernel_regularizer=keras.regularizers.l2(l2r))
@@ -133,7 +133,7 @@ class AE(keras.Model):
 
         h1 = tf.nn.relu(self.encoder1(inputs))
         h2 = tf.reshape(h1,[-1,2*2*88])
-        h = self.encoder2(h2)
+        h = self.dropout1(self.encoder2(h2))
         # [b, 44] => [b, 2, 88]
         x_hat1 = self.decoder1(h)
         x_hat1 = tf.reshape(x_hat1,[-1,1,176,1])
@@ -157,7 +157,7 @@ for j in range(88):
 y1_test=tf.reshape(y1_test,[1,2,88,1])
 savepic(y1_test,"000")
 
-for epoch in range(20000):
+for epoch in range(100000):
 
     for step, x in enumerate(train_db):
 
@@ -189,5 +189,5 @@ for epoch in range(20000):
         saveweight(weight_Conv2d_0[0][0][:,:,0],"0_epoch"+str(epoch))
         saveweight(weight_Conv2d_0[0][0][:,:,1],"1_epoch"+str(epoch))
         saveweight(weight_Conv2d_1[0][0],"2_epoch"+str(epoch))
-#tf.saved_model.save(model, "saved/1")
+tf.saved_model.save(model, "saved/2")
 
