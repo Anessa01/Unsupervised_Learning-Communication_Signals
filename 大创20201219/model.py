@@ -46,15 +46,13 @@ def savestem(h,name):
     ax.set_ylabel('h')
     fig.savefig('h_stem/' + name + '.png')
 
-
 data=pkl2numpy("2016.04C.multisnr.pkl")
-y1_test=data[('QPSK',8)][198,:,12:100]
+y1_test=data[('GFSK',18)][199,:,12:100]
 for j in range(88):
     y1_test[0,j]=(y1_test[0,j]+2.5)/5.
     y1_test[1,j]=(y1_test[1,j]+2.5)/5.
 y1_test=tf.reshape(y1_test,[1,2,88,1])
 savepic(y1_test,"000")
-
 model=tf.saved_model.load("./saved/1")
 
 logits,h=model.call(y1_test)
