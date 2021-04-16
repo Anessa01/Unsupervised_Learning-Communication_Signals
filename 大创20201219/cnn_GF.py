@@ -131,13 +131,15 @@ class AE(keras.Model):
     def call(self, inputs, training=None):
         # [b, 2, 88] => [b, 44]
 
-        h1 = tf.nn.relu(self.encoder1(inputs))
+        #h1 = tf.nn.relu(self.encoder1(inputs))
+        h1 = self.encoder1(inputs)
         h2 = tf.reshape(h1,[-1,2*2*88])
         h = self.dropout1(self.encoder2(h2))
         # [b, 44] => [b, 2, 88]
         x_hat1 = self.decoder1(h)
         x_hat1 = tf.reshape(x_hat1,[-1,1,176,1])
-        x_hat2 = tf.nn.relu(self.decoder2(x_hat1))
+        #x_hat2 = tf.nn.relu(self.decoder2(x_hat1))
+        x_hat2 = self.decoder2(x_hat1)
         #x_hat = self.pool1(x_hat2)
         x_hat=tf.reshape(x_hat2,[-1,2,88,1])
         return x_hat,h
