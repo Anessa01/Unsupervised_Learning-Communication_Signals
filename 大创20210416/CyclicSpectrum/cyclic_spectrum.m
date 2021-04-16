@@ -49,7 +49,7 @@ end
 %%% 遍历循环频率取值结束 %%%
  
 %%% 循环谱作图 %%%
-if K==1
+if K > 0
     figure;
     mesh(f, alpha, abs(S)); 
     axis tight;
