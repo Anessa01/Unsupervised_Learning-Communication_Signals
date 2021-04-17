@@ -1,6 +1,7 @@
 import  os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
+
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
@@ -103,27 +104,46 @@ DLabel = {'8PSK':0, 'AM-DSB':1, 'AM-SSB':2, 'BPSK':3, 'CPFSK':4, 'GFSK':5, 'PAM4
 
 #prepare datasets
 data=pkl2numpy("RML2016.10a_dict.pkl")
+trainsz = 1000
 
-x_train = np.zeros((256 * 220, 2, 128))
-x_label = np.zeros(256 *220)
-i = -1
-for [label,snr] in data:
-    for j in range(256,512):
-        i += 1
-        x_train[i] = data[label,snr][j]
-        x_label[i] = DLabel[label]
+def alloc(data):
+    x_train = np.zeros((trainsz * 220, 2, 128))
+    x_label = np.zeros(trainsz * 220)
+    i = -1
+    for [label, snr] in data:
+        for j in range(0,trainsz):
+            i += 1
+            x_train[i] = data[label, snr][j]
+            x_label[i] = DLabel[label]
+        print(label, snr, " loaded")
+    return x_train, x_label
+
+def dynamicalloc(data):
+    x_train = np.empty((0,2,128))
+    x_label = np.empty((0))
+
+    for [label,snr] in data:
+        if snr > 10:
+            x_train = np.append(x_train,np.reshape(data[label,snr],(trainsz,2,128)),axis = 0)
+            x_label = np.append(x_label,np.full((trainsz),DLabel[label]), axis = 0)
+            print(label,snr," loaded")
+    return x_train, x_label
+
+x_train, x_label = dynamicalloc(data)
+
 
 # x_train(256*220, 2, 128)
 # x_label(256*220)
-x_train=tf.reshape(x_train,[x_train.shape[0],256])
+x_train = tf.reshape(x_train,[x_train.shape[0],256])
 labels = tf.constant([0,1,2,3,4,5,6,7,8,9,10])
+
 
 print(x_train.shape, x_label.shape)
 print(x_label[40])
 
 model = tf.keras.Sequential([
     layers.Dense(128, activation='relu', kernel_initializer='he_normal', input_shape=(256,)),
-    layers.Dense(64, activation='relu', kernel_initializer='he_normal'),
+    layers.Dense(64, activation='relu', kernel_initializer='he_normal',kernel_regularizer=tf.keras.regularizers.l1(0.01)),
     layers.Dense(32, activation='relu', kernel_initializer='he_normal',kernel_regularizer=tf.keras.regularizers.l2(0.01)),
     layers.Dense(11, activation='softmax')
 ])
@@ -133,16 +153,15 @@ model.compile(optimizer=tf.keras.optimizers.Adam(0.001),
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
-history = model.fit(x_train, x_label, batch_size=128, epochs=100, validation_split=0.3, verbose=0)
+history = model.fit(x_train, x_label, batch_size=128, epochs=1000, validation_split=0.3, verbose=0)
 
 print(history.history['val_accuracy'])
 
 
-import matplotlib as mpl
-mpl.use('nbAgg')
-import matplotlib.pyplot as plt
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
 plt.legend(['training', 'validation'], loc='upper left')
-plt.show()
+#plt.show()
+plt.savefig('cdata/epoch10.png')
+
 
