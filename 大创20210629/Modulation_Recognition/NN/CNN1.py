@@ -17,13 +17,14 @@ class Net(nn.Module):
 
     def forward(self, x):
         # Max pooling over a (2, 2) window
-        x = F.relu(F.dropout(self.conv1(x), p=0.5))
-        x = F.relu(F.dropout(self.conv2(x), p=0.5))
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
         x = x.view(-1, 16 * 1 * 124)
-        x = F.relu(F.dropout(self.fc1(x), p=0.5))
+        x = F.relu(F.dropout(self.fc1(x), p=0.1))
+        y = F.normalize(x)  #h1 loss
         #x = F.softmax(self.fc2(x), dim=1)
-        x = self.fc2(x)
-        return x
+        x = self.fc2(y)
+        return x, y
 
     def num_flat_features(self, x):
         size = x.size()[1:]  # all dimensions except the batch dimension
@@ -31,6 +32,11 @@ class Net(nn.Module):
         for s in size:
             num_features *= s
         return num_features
+
+
+
+
+
 
 
 ## test
