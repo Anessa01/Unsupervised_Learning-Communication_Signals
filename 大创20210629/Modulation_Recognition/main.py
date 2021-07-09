@@ -40,10 +40,10 @@ for epoch in range(2000):
 
         # preprocess of inputdata
         input = torch.reshape(y["data"], [batchsz, 1, 2, 128])
-        input = input.type(dtype = torch.float32)
+        input = input.type(dtype=torch.float32)
         input = input.cuda()
         label = y["label"]
-        label = label.type(dtype = torch.long)
+        label = label.type(dtype=torch.long)
         label = label.cuda()
 
         output, h1 = CNN1(input)
@@ -63,7 +63,7 @@ for epoch in range(2000):
 
         running_loss += loss.item()
     if epoch % 10 == 0:
-        print('[%d, %5d] loss: %.3f h_loss: %.3f W_loss: %.3f' %(epoch + 1, i + 1, loss.item(), h1_loss, W2_loss))
+        print('[epoch %d] loss: %.3f h_loss: %.3f W_loss: %.3f' % (epoch + 1, loss.item(), h1_loss, W2_loss))
         running_loss = 0.0
         torch.save(CNN1.state_dict(), PATH)
 
