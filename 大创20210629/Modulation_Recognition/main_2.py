@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 batchsz = 200
-PATH = "saved/CNN2statedict.pt"
+PATH = "saved/CNN2statedict_2.pt"
 
 dataset = RMLdataset()
 

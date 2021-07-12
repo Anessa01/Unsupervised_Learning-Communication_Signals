@@ -2,23 +2,23 @@ from dataset import *
 from NN import *
 import torch
 from torch.utils.data import Dataset, DataLoader
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+import numpy as np
 
-testidx = 0
-testidy = 1
+batchsz = 100
+bias  = 2
 
-batchsz = 200
 PATH = "saved/CNN1statedict_1.pt"
 
-dataset = RMLdataset()
+dataset = RMLtestset()
 
-RMLdataloader = DataLoader(dataset,  batch_size=batchsz, shuffle=True, num_workers=0)
+RMLdataloader = DataLoader(dataset,  batch_size=batchsz, num_workers=0)
 
 list = []
 for i, y in enumerate(RMLdataloader):
     list.append(y)
+
+# in list : 0-9 for label 0. 0-109 for one SNR
+# [(SNR / 2) + 10] * 11 + label * 10 + 0-9
 
 print("==Dataset ready")
 
@@ -29,19 +29,23 @@ CNN1.eval()
 
 print("==Net ready")
 
+for SNR in range(-20, 20, 2):
+    acc = 0
+    for label in range(11):
+        testidx = int(((SNR / 2) + 10) * 11 + label * 10 + bias)
+        y = list[testidx]
 
+        input = torch.reshape(y["data"], [batchsz, 1, 2, 128])
+        input = input.type(dtype=torch.float32)
+        input = input.cuda()
+        label = y["label"]
+        label = label.type(dtype=torch.long)
+        label = label.cuda()
 
-y = list[testidx]
+        output, h = CNN1(input)
+        res = 0
+        for testidy in range(100):
+            res += output[testidy].argmax() == label[testidy]
+        acc += res
+    print(acc)
 
-input = torch.reshape(y["data"], [batchsz, 1, 2, 128])
-input = input.type(dtype = torch.float32)
-input = input.cuda()
-label = y["label"]
-label = label.type(dtype = torch.long)
-label = label.cuda()
-
-output, h = CNN1(input)
-
-
-res = 0
-print(output[testidy].argmax(), label[testidy])
