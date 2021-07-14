@@ -31,8 +31,8 @@ print("==Net ready")
 
 for SNR in range(-20, 20, 2):
     acc = 0
-    for label in range(11):
-        testidx = int(((SNR / 2) + 10) * 11 + label * 10 + bias)
+    for labelidx in range(11):
+        testidx = int(((SNR / 2) + 10) * 11 + labelidx)
         y = list[testidx]
 
         input = torch.reshape(y["data"], [batchsz, 1, 2, 128])

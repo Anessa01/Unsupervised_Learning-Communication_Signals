@@ -8,6 +8,7 @@ import torch.optim as optim
 
 batchsz = 200
 PATH = "saved/CNN1statedict_1.pt"
+load = 1
 
 dataset = RMLdataset()
 
@@ -21,7 +22,7 @@ print("==Dataset ready")
 
 CNN1 = Net()
 CNN1 = CNN1.cuda()
-load = 1
+
 if load:
     CNN1.load_state_dict(torch.load(PATH))
     CNN1.eval()

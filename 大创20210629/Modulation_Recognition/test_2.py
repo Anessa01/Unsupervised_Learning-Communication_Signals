@@ -5,9 +5,9 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
 batchsz = 100
-bias  = 2
+bias = 2
 
-PATH = "saved/CNN2statedict.pt"
+PATH = "saved/CNN2ss_np.pt"
 
 dataset = RMLtestset()
 
@@ -17,7 +17,7 @@ list = []
 for i, y in enumerate(RMLdataloader):
     list.append(y)
 
-# in list : 0-9 for label 0. 0-109 for one SNR
+# in list : 0-10 for one SNR.
 # [(SNR / 2) + 10] * 11 + label * 10 + 0-9
 
 print("==Dataset ready")
@@ -32,7 +32,7 @@ print("==Net ready")
 for SNR in range(-20, 20, 2):
     acc = 0
     for labelidx in range(11):
-        testidx = int(((SNR / 2) + 10) * 110 + labelidx * 10 + bias)
+        testidx = int(((SNR / 2) + 10) * 11 + labelidx)
         y = list[testidx]
 
         input = torch.reshape(y["data"], [batchsz, 1, 2, 128])

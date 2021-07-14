@@ -5,8 +5,13 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
 
-batchsz = 200
+batchsz = 100
 PATH = "saved/CNN2statedict_2.pt"
+
+PATH_conv1 = "saved/CNN2_pretrain/CNN2_conv1_statedict.pt"
+PATH_conv2 = "saved/CNN2_pretrain/CNN2_conv2_statedict.pt"
+PATH_fc1 = "saved/CNN2_pretrain/CNN2_fc1_statedict.pt"
+PATH_fc2 = "saved/CNN2_pretrain/CNN2_fc2_statedict.pt"
 
 dataset = RMLdataset()
 
@@ -22,8 +27,14 @@ CNN2 = Net2()
 CNN2 = CNN2.cuda()
 load = 0
 if load:
-    CNN2.load_state_dict(torch.load(PATH))
-    CNN2.eval()
+    CNN2.conv1.load_state_dict(torch.load(PATH_conv1))
+    CNN2.conv1.eval()
+    CNN2.conv2.load_state_dict(torch.load(PATH_conv2))
+    CNN2.conv2.eval()
+    CNN2.fc1.load_state_dict(torch.load(PATH_fc1))
+    CNN2.fc1.eval()
+    CNN2.fc2.load_state_dict(torch.load(PATH_fc2))
+    CNN2.fc2.eval()
 
 print("==Net ready")
 
@@ -52,7 +63,7 @@ for epoch in range(2000):
         optimizer.step()
 
         running_loss += loss.item()
-    if epoch % 10 == 0:
+    if epoch % 1 == 0:
         print('[epoch %d] loss: %.3f' %(epoch + 1, loss.item()))
         running_loss = 0.0
         torch.save(CNN2.state_dict(), PATH)
